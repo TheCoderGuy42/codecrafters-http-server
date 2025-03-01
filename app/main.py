@@ -8,7 +8,15 @@ def main():
     # Uncomment this to pass the first stage
     #
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
-    server_socket.accept() # wait for client
+    while True:
+        conn, addr = server_socket.accept() # wait for client
+        msg = create_msg()
+        conn.send(msg.encode())
+        conn.close()
+
+
+def create_msg():
+    return "HTTP/1.1 200 OK\r\n\r\n"
 
 
 if __name__ == "__main__":
