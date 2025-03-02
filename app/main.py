@@ -1,24 +1,29 @@
 import socket  # noqa: F401
+import threading
 
+def handle_client(conn, addr):
+    r_msg = conn.recv(1024).decode('utf-8')
+    # r_msg = "GET /user-agent HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: pineapple/raspberry\r\n\r\n"
+    parsed_msg = parse(r_msg)
+
+    s_msg = create_msg(parsed_msg)
+
+    deparsed_msg = deparse(s_msg)
+    conn.send(deparsed_msg.encode())
+    conn.close()
 
 def main():
     # You can use print statements as follows for debugging, they'll be visible when running tests.
     print("Logs from your program will appear here!")
 
-    # Uncomment this to pass the first stage
-    #
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
+    
     while True:
         conn, addr = server_socket.accept() # wait for client
-        r_msg = conn.recv(1024).decode('utf-8')
-        # r_msg = "GET /user-agent HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: pineapple/raspberry\r\n\r\n"
-        parsed_msg = parse(r_msg)
+        thread = threading.Thread(target=handle_client, args=(conn,addr))
+        thread.start()
 
-        s_msg = create_msg(parsed_msg)
 
-        deparsed_msg = deparse(s_msg)
-        conn.send(deparsed_msg.encode())
-        conn.close()
 
 def deparse(msg):
     decoded = ""
@@ -78,7 +83,7 @@ def create_msg(msg):
         http_response["status_line"]["status"] = "OK"
 
         content = msg["headers"]["User-Agent"]
-        
+
         http_response["headers"]["Content-Type"] = "text/plain"
         http_response["headers"]["Content-Length"] = str(len(content))
 
