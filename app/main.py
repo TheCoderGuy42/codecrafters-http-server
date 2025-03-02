@@ -1,5 +1,7 @@
 import socket  # noqa: F401
 import threading
+import os
+import sys
 
 def handle_client(conn, addr):
     r_msg = conn.recv(1024).decode('utf-8')
@@ -17,7 +19,7 @@ def main():
     print("Logs from your program will appear here!")
 
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
-    
+
     while True:
         conn, addr = server_socket.accept() # wait for client
         thread = threading.Thread(target=handle_client, args=(conn,addr))
@@ -64,7 +66,7 @@ def create_msg(msg):
         http_response["status_line"]["status"] = "OK"
 
 
-    elif target.startswith("/echo"):
+    elif target.startswith("/echo/"):
 
         http_response["status_line"]["return_code"] = "200"
         http_response["status_line"]["status"] = "OK"
@@ -89,11 +91,41 @@ def create_msg(msg):
 
         http_response["response_body"] = content
 
+    elif target.startswith("/files/"):
+
+        if "--directory" in sys.argv:
+            index = sys.argv.index("--directory") + 1
+            if index < len(sys.argv):
+                directory = sys.argv[index]
+                # ignoring /files/
+                target = os.path.join(directory, target[7:])
+        
+        # if file exists, else read the file
+        if os.path.isfile(target):
+            with open(target, 'r') as file:
+                content = file.read()
+
+            http_response["status_line"]["return_code"] = "200"
+            http_response["status_line"]["status"] = "OK"
+
+            http_response["headers"]["Content-Type"] = "application/octet-stream"
+            http_response["headers"]["Content-Length"] = os.path.getsize(target)
+
+            http_response["response_body"] = content
+
+        else:
+            send404(http_response)
+
     else:
-        http_response["status_line"]["return_code"] = "404"
-        http_response["status_line"]["status"] = "Not Found"
+        http_response = send404(http_response)
 
     return http_response
+
+def send404(msg):
+    msg["status_line"]["return_code"] = "404"
+    msg["status_line"]["status"] = "Not Found"
+    return msg
+
 
 def parse(msg):
     args = msg.split("\r\n")
