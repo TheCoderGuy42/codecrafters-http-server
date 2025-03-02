@@ -15,17 +15,59 @@ def main():
 
         s_msg = create_msg(parsed_msg)
 
-        conn.send(s_msg.encode())
+        deparsed_msg = deparse(s_msg)
+        conn.send(deparsed_msg.encode())
         conn.close()
 
+def deparse(msg):
+    decoded = ""
+    decoded += " ".join(msg["status_line"]) + "\r\n\r\n"
+    if msg["headers"]:
+        decoded += "\r\n".join(msg["headers"])
+    return decoded
 
 def create_msg(msg):
 
-    host_args = msg["host"].split(":")
-    assert (host_args[0] == "Host")
+    status_line = { 
+        "http_version": msg["request_line"]["http_version"],     #First part of the status line is always the http version
+        "return_code": None,                                     #3 digit return code
+        "status": None                                           #Short status string
+    }
+
+    http_response = {
+        "status_line": status_line,
+        "headers": [],
+        "response_body": "",
+    }
+    #split by / take first arg, the first arg is "" since it's /foo/bar = ["",foo,bar]
+    target = msg["request_line"]["request_target"].split("/")
+
+
+    # host_args = msg["host"].split(":")
+    # assert (host_args[0] == "Host")
     
-    if msg["request_line"]["request_target"] == "/":
-        return "HTTP/1.1 200 OK\r\n\r\n"
+    # target is right after GET 
+    if target[0] == "/" and len(target) == 0:
+        http_response["status_line"]["return_code"] = "200"
+        http_response["status_line"]["status"] = "OK"
+
+
+        return http_response
+    if target[1] == "echo":
+
+        http_response["status_line"]["return_code"] = "200"
+        http_response["status_line"]["status"] = "OK"
+        
+        content = "/".join(target)
+
+        content_type = "Content-Type: text/plain"
+        content_length = f"Content-Length: {len(content)}"
+        http_response["response_body"] = content
+
+
+        string = target[2]
+        return http_response
+    
     else:
         return "HTTP/1.1 404 Not Found\r\n\r\n"
 
@@ -36,17 +78,18 @@ def parse(msg):
 
     # "\n\r".join(http_request)
     request_line = {
-        "http_method": args[0][0],
-        "request_target": args[0][1],
-        "http_version": args[0][2]
+        "http_method": args[0][0],    # HTTP method
+        "request_target": args[0][1], # Request target 
+        "http_version": args[0][2],   # HTTP version
     }
 
     http_request = {
         "request_line": request_line,
-        "host": args[1],
-        "user_agent": args[2],
-        "accept": args[3]
+        "headers":[],
     }
+
+    for arg in args[1:]:
+        http_request["headers"].append(arg)
     #print(http_request)
     return http_request
 
