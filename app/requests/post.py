@@ -19,7 +19,7 @@ def post_request(http_request, http_response):
 
       try:
         with open(target, 'w') as file:
-            file.write(content)
+            file.write(content) 
       except:
         http_response = not_found(http_response)
 
