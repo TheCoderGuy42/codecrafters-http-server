@@ -11,6 +11,7 @@ def main():
     while True:
         conn, addr = server_socket.accept() # wait for client
         r_msg = conn.recv(1024).decode('utf-8')
+        # r_msg = "GET /echo/banana HTTP/1.1\r\nHost: localhost:4221\r\n\r\n"
         parsed_msg = parse(r_msg)
 
         s_msg = create_msg(parsed_msg)
@@ -21,9 +22,12 @@ def main():
 
 def deparse(msg):
     decoded = ""
-    decoded += " ".join(msg["status_line"]) + "\r\n\r\n"
+    decoded += " ".join(msg["status_line"].values()) + "\r\n"
     if msg["headers"]:
         decoded += "\r\n".join(msg["headers"])
+    decoded += "\r\n\r\n" 
+    if msg["response_body"]:
+        decoded += msg["response_body"]
     return decoded
 
 def create_msg(msg):
@@ -40,36 +44,42 @@ def create_msg(msg):
         "response_body": "",
     }
     #split by / take first arg, the first arg is "" since it's /foo/bar = ["",foo,bar]
-    target = msg["request_line"]["request_target"].split("/")
-
+    #target = msg["request_line"]["request_target"].split("/")
+    target = msg["request_line"]["request_target"]
 
     # host_args = msg["host"].split(":")
     # assert (host_args[0] == "Host")
     
     # target is right after GET 
-    if target[0] == "/" and len(target) == 0:
+    if target == "/":
         http_response["status_line"]["return_code"] = "200"
         http_response["status_line"]["status"] = "OK"
 
 
         return http_response
-    if target[1] == "echo":
+    elif target.startswith("/echo"):
 
         http_response["status_line"]["return_code"] = "200"
         http_response["status_line"]["status"] = "OK"
         
-        content = "/".join(target)
+        # removing the /echo/
+        content = target[6:]
 
         content_type = "Content-Type: text/plain"
         content_length = f"Content-Length: {len(content)}"
+
+        http_response["headers"].append(content_type)
+        http_response["headers"].append(content_length)
+
         http_response["response_body"] = content
 
-
-        string = target[2]
         return http_response
     
     else:
-        return "HTTP/1.1 404 Not Found\r\n\r\n"
+        http_response["status_line"]["return_code"] = "404"
+        http_response["status_line"]["status"] = "Not Found"
+
+        return http_response
 
 def parse(msg):
     args = msg.split("\r\n")
