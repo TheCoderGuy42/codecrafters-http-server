@@ -6,10 +6,7 @@ from app.parsing import parse, deparse
 from app.requests.get import get_request
 from app.requests.post import post_request
 from app.requests.not_found import not_found
-# from parsing import parse, deparse
-# from requests.get import get_request
-# from requests.post import post_request
-# from requests.not_found import not_found
+
 
 def handle_client(conn, addr):
     r_msg = conn.recv(1024).decode('utf-8')
@@ -19,7 +16,7 @@ def handle_client(conn, addr):
     s_msg = create_msg(parsed_msg)
 
     deparsed_msg = deparse(s_msg)
-    conn.send(deparsed_msg.encode())
+    conn.send(deparsed_msg)
     conn.close()
 
 def testing():

@@ -1,3 +1,4 @@
+import codecs
 
 def parse(msg):
     args = msg.split("\r\n")
@@ -37,6 +38,14 @@ def deparse(msg):
     if msg["headers"]:
         decoded += "\r\n".join(f"{key}: {value}" for key,value in msg["headers"].items())
     decoded += "\r\n\r\n" 
-    if msg["response_body"]:
-        decoded += msg["response_body"]
+    decoded = decoded.encode()
+    if msg["response_body"] and msg["headers"].get("Content-Encoding") == "gzip":
+        decoded += gzip_compression(msg["response_body"])
+    elif msg["response_body"]:
+        decoded += msg["response_body"].encode()
+
     return decoded
+
+def gzip_compression(msg):
+
+    return codecs.encode(msg.encode(), "zlib")
