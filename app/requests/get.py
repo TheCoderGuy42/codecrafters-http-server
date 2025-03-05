@@ -15,9 +15,20 @@ def get_request(http_request, http_response):
 
     http_response["status_line"]["return_code"] = "200"
     http_response["status_line"]["status"] = "OK"
+    no_body = False
 
-    if http_request["headers"].get("Accept-Encoding") == "gzip":
-        http_response["headers"]["Content-Encoding"] = "gzip"
+    if http_request["headers"].get("Accept-Encoding") != None:
+        http_response["headers"]["Content-Type"] = "text/plain"
+        compression_list = http_request["headers"]["Accept-Encoding"].split(",")
+        for compression in compression_list:
+            if compression.strip() == "gzip":
+                http_response["headers"]["Content-Encoding"] = "gzip"
+            else:
+                no_body = True
+        if no_body:
+            return http_response
+
+                
 
 
     if target == "/":
